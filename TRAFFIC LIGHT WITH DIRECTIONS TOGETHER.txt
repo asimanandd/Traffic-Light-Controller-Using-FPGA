@@ -1,0 +1,97 @@
+TRAFFIC LIGHT WITH DIRECTIONS TOGETHER
+
+module Traffic_Light_Controller (
+    input clk,
+    input rst,
+    output reg [2:0] light_NS, // North-South light
+    output reg [2:0] light_EW  // East-West light
+);
+
+    // State encoding with unique binary values
+    parameter S_GREEN_NS = 3'b000, 
+              S_YELLOW_NS = 3'b001, 
+              S_RED_NS = 3'b010,
+              S_GREEN_EW = 3'b011, 
+              S_YELLOW_EW = 3'b100; // Corrected to 3 bits
+
+    reg [2:0] current_state, next_state; // 3 bits for state representation
+    reg [3:0] count; // Counter for timing
+
+    // State transition logic
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            current_state <= S_GREEN_NS; // Start with North-South green
+            count <= 0;
+        end else begin
+            count <= count + 1;
+            if (count == 10) begin // Change state every 10 cycles
+                current_state <= next_state;
+                count <= 0;
+            end
+        end
+    end
+
+    // Next state logic
+    always @(*) begin
+        case (current_state)
+            S_GREEN_NS: begin
+                light_NS = 3'b001; // Green
+                light_EW = 3'b100; // Red
+                next_state = S_YELLOW_NS;
+            end
+            S_YELLOW_NS: begin
+                light_NS = 3'b010; // Yellow
+                light_EW = 3'b100; // Red
+                next_state = S_RED_NS;
+            end
+            S_RED_NS: begin
+                light_NS = 3'b100; // Red
+                light_EW = 3'b001; // Green
+                next_state = S_GREEN_EW;
+            end
+            S_GREEN_EW: begin
+                light_NS = 3'b100; // Red
+                light_EW = 3'b001; // Green
+                next_state = S_YELLOW_EW;
+            end
+            S_YELLOW_EW: begin
+                light_NS = 3'b100; // Red
+                light_EW = 3'b010; // Yellow
+                next_state = S_GREEN_NS;
+            end
+            default: begin
+                light_NS = 3'b000; // Off
+                light_EW = 3'b000; // Off
+                next_state = S_GREEN_NS;
+            end
+        endcase
+    end
+endmodule
+
+
+TESTBENCH
+
+module Traffic_Light_Controller_TB;
+    reg clk, rst;
+    wire [2:0] light_NS;
+    wire [2:0] light_EW;
+
+    // Instantiate the Traffic Light Controller
+    Traffic_Light_Controller dut (.clk(clk), .rst(rst), .light_NS(light_NS), .light_EW(light_EW));
+
+    initial begin
+        clk = 1'b0;
+        forever #10 clk = ~clk; // Adjust clock period as needed
+    end
+
+    initial begin
+        rst = 1; // Assert reset
+        #15 rst = 0; // Release reset after some time
+        #1000; // Run simulation for a longer time
+        $finish; // End the simulation
+    end
+
+    initial begin
+        $monitor("Time: %0t | State: %b | light_NS: %b | light_EW: %b", $time, dut.current_state, light_NS, light_EW);
+    end
+endmodule
