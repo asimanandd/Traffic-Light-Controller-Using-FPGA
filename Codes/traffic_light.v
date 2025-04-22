@@ -1,0 +1,104 @@
+module traffic_light(
+    input clk,
+    input rst,
+    output reg [2:0] light_N,  // North lights
+    output reg [2:0] light_E,  // East lights
+    output reg [2:0] light_S,  // South lights
+    output reg [2:0] light_W,   // West lights
+    output reg [3:0] wait_time  // Counter for waiting time
+);
+
+    // State Definitions
+    parameter S_GREEN_N = 3'b000, 
+              S_YELLOW_N = 3'b001,
+              S_RED_N_GREEN_E = 3'b010, 
+              S_RED_N_YELLOW_E = 3'b011,
+              S_RED_E_GREEN_S = 3'b100, 
+              S_RED_E_YELLOW_S = 3'b101,
+              S_RED_S_GREEN_W = 3'b110, 
+              S_RED_S_YELLOW_W = 3'b111,
+              S_RED_W_GREEN_N = 4'b1000, 
+              S_RED_W_YELLOW_N = 4'b1001;
+
+    reg [3:0] count;
+    reg [3:0] current_state, next_state;
+
+    // Timing Parameters
+    parameter GREEN_TIME = 10, 
+              YELLOW_TIME = 2;
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            current_state <= S_GREEN_N;
+            count <= 0;
+            wait_time <= 0;
+        end else begin
+            if (count < (current_state == S_YELLOW_N ? YELLOW_TIME : GREEN_TIME)) begin
+                count <= count + 1;
+                wait_time <= wait_time + 1; // Increment wait time counter
+            end else begin
+                current_state <= next_state;
+                count <= 0;
+                wait_time <= 0; // Reset wait time counter
+            end
+        end
+    end
+
+    always @(*) begin
+        // Default outputs
+        light_N = 3'b100; // Red
+        light_E = 3'b100; // Red
+        light_S = 3'b100; // Red
+        light_W = 3'b100; // Red
+        
+        case (current_state)
+            S_GREEN_N: begin
+                light_N = 3'b001; // Green
+                next_state = S_YELLOW_N;
+            end
+            S_YELLOW_N: begin
+                light_N = 3'b010; // Yellow
+                next_state = S_RED_N_GREEN_E;
+            end
+            S_RED_N_GREEN_E: begin
+                light_E = 3'b001; // Green
+                next_state = S_RED_N_YELLOW_E;
+            end
+            S_RED_N_YELLOW_E: begin
+                light_E = 3'b010; // Yellow
+                next_state = S_RED_E_GREEN_S;
+            end
+            S_RED_E_GREEN_S: begin
+                light_S = 3'b001; // Green
+                next_state = S_RED_E_YELLOW_S;
+            end
+            S_RED_E_YELLOW_S: begin
+                light_S = 3'b010; // Yellow
+                next_state = S_RED_S_GREEN_W;
+            end
+            S_RED_S_GREEN_W: begin
+                light_W = 3'b001; // Green
+                next_state = S_RED_S_YELLOW_W;
+            end
+            S_RED_S_YELLOW_W: begin
+                light_W = 3'b010; // Yellow
+                next_state = S_RED_W_GREEN_N;
+            end
+            S_RED_W_GREEN_N: begin
+                light_N = 3'b001; // Green
+                next_state = S_RED_W_YELLOW_N;
+            end
+            S_RED_W_YELLOW_N: begin
+                light_N = 3'b010; // Yellow
+                next_state = S_GREEN_N;
+            end
+            default: begin
+                light_N = 3'b100; // Default to red
+                light_E = 3'b100;
+                light_S = 3'b100;
+                light_W = 3'b100;
+                next_state = S_GREEN_N; // Reset to initial state
+            end
+        endcase
+    end
+endmodule
